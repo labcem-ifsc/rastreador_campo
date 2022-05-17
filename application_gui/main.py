@@ -1,3 +1,6 @@
+#Main V.1.0
+
+
 #Biblioteca de interface
 from tkinter import *
 from tkinter.ttk import * # Frame, Label, Entry, Button
@@ -257,13 +260,15 @@ class main_window(Frame):
         frm_param.rowconfigure(3, pad=3)
         frm_param.rowconfigure(4, pad=3)
         frm_param.rowconfigure(5, pad=3)
+        frm_param.rowconfigure(6, pad=3)
         
-        lbl_par_1 = Label(frm_param, text='Possição Ponto 1 (cm):')
-        lbl_par_2 = Label(frm_param, text='Possição Ponto 2 (cm):')
+        lbl_par_1 = Label(frm_param, text='Posição Ponto 1 (cm):')
+        lbl_par_2 = Label(frm_param, text='Posição Ponto 2 (cm):')
         lbl_par_3 = Label(frm_param, text='Passo eixo X (cm):')
         lbl_par_4 = Label(frm_param, text='Passo eixo Y (cm):')
         lbl_par_9 = Label(frm_param, text='Maior valor medido:')
         lbl_par_10 = Label(frm_param, text='Menor valor medido:')
+        lbl_par_15 = Label(frm_param, text='Abrir arquivo CSV:')
         self.lbl_par_5 = Label(frm_param, text='00,00 00,00')
         self.lbl_par_6 = Label(frm_param, text='00,00 00,00')
         self.lbl_par_7 = Label(frm_param, text='0,0000')
@@ -281,8 +286,14 @@ class main_window(Frame):
         self.lbl_par_8.grid(row=3, column=1, sticky=E)
         lbl_par_9.grid(row=4, column=0, sticky=W)
         lbl_par_10.grid(row=5, column=0, sticky=W)
+        lbl_par_15.grid(row=6, column=0, sticky=W) #Yuri
         self.lbl_par_11.grid(row=4, column=1, sticky=E)
         self.lbl_par_12.grid(row=5, column=1, sticky=E)
+        
+        #---botão de abrir arquivo CSV Yuri----------------
+        btn_csv_abrir = Button(frm_param, text='Abrir')
+        btn_csv_abrir.place(x=20,y=155,width=181,height=25)
+        btn_csv_abrir['command'] = self.info_arquivocsv
         
         #---nome do frame---------------------
         frm_progress = Labelframe(self.frm_notebook1)
@@ -597,6 +608,8 @@ class main_window(Frame):
         else:
             return False
     
+
+    
     #Função se string contem somente numero e maior que zero     
     def verifica_string(self, string, mensagem):
         #Caso string contem somente numero
@@ -675,6 +688,7 @@ class main_window(Frame):
                                    message="Não é possivel realizar está função")
             return
         
+
         valor_x = self.var_matriz_x.get()
         valor_y = self.var_matriz_y.get()
         
@@ -860,7 +874,7 @@ class main_window(Frame):
                 print("teste1")
                 time.sleep(0.125)
             
-        y=y-float(xyz[1])
+        y= y-float(xyz[1])
         if not (y==0):#Vai para a coordenada do ponto no eixo y
             print("movimento y="+str(y))
             if(y>0):direcao=self.dict_jog['up']
@@ -869,7 +883,7 @@ class main_window(Frame):
             while(controle_cnc.estado_atual(self.serial_cnc)!='Idle'):
                 print("teste2")
                 time.sleep(0.125)
-        
+                
         self.matrix_meas = [[-80 for _ in range(self.cols)] for _ in range(self.rows)]
         
         var_progressbar=0
@@ -892,7 +906,7 @@ class main_window(Frame):
                     if(self.flag_stop):
                         self.flag_stop = False
                         return
-                    self.matrix_meas[i][j]=self.leitura_amplitude()
+                    self.matrix_meas[i][j]=self.leitura_amplitude()                     
                     if(self.matrix_meas[i][j] > self.max_medido):
                         self.max_medido = self.matrix_meas[i][j]
                         self.lbl_par_11['text'] = str(self.max_medido)
@@ -902,19 +916,26 @@ class main_window(Frame):
                     self.button_matriz[i][j].config(text="\n"+str(self.matrix_meas[i][j])+" dBm\n")
                     var_progressbar=var_progressbar+step_progressbar
                     self.var_pb.set(var_progressbar)
+                    if (i > 0) or (j > 0): #define tempo entre dois pontos 
+                        #delta_t = meas_time - datetime.now()
+                        tempo_total = tempo_total - delta_t
+                        tempo_total = timedelta(seconds=tempo_total.total_seconds())
+                        horas, sobra = divmod(tempo_total.seconds, 3600)
+                        minutos, segundos = divmod(sobra, 60)
+                        self.lbl_10.config(text='Tempo estimado de {:02d} : {:02d}: {:02d}'.format(horas, minutos, segundos))
                     self.master.update()
                     if(j+1<self.cols):
                         self.meas_movimento_cnc(self.dict_jog['right'], self.var_step_x)
                         while(controle_cnc.estado_atual(self.serial_cnc)!='Idle'):
                             print("teste3")
                             time.sleep(0.125)
-                        #time.sleep(self.tempo_entre_medidas) #pra teste da tela atualizando
-                        if (i == 0) and (j == 0): #define tempo entre dois pontos
+                        if (i == 0) and (j == 0): #define tempo entre dois pontos 
                             delta_t = datetime.now() - self.meas_time
-                            tempo_total = (self.rows-1)*(self.cols-1)*delta_t
+                            tempo_total = (self.rows)*(self.cols)*delta_t
                             tempo_total = timedelta(seconds=tempo_total.total_seconds())
                             horas, sobra = divmod(tempo_total.seconds, 3600)
                             minutos, segundos = divmod(sobra, 60)
+                            #self.master.update()
                             self.lbl_10.config(text='Tempo estimado de {:02d} : {:02d}: {:02d}'.format(horas, minutos, segundos))
 
                 flag_ordem=False
@@ -933,6 +954,13 @@ class main_window(Frame):
                     self.button_matriz[i][j].config(text="\n"+str(self.matrix_meas[i][j])+" dBm\n")
                     var_progressbar=var_progressbar+step_progressbar
                     self.var_pb.set(var_progressbar)
+                    if (i > 0) or (j > 0): #define tempo entre dois pontos 
+                        #delta_t = meas_time - datetime.now()
+                        tempo_total = tempo_total - delta_t
+                        tempo_total = timedelta(seconds=tempo_total.total_seconds())
+                        horas, sobra = divmod(tempo_total.seconds, 3600)
+                        minutos, segundos = divmod(sobra, 60)
+                        self.lbl_10.config(text='Tempo estimado de {:02d} : {:02d}: {:02d}'.format(horas, minutos, segundos))
                     self.master.update()
                     if(j!=0):
                         self.meas_movimento_cnc(self.dict_jog['left'], self.var_step_x)
@@ -1099,6 +1127,141 @@ class main_window(Frame):
             data.reverse()
         
         self.mapa_de_calor(data, vmax, vmin, step, flag, escolhas, destino_save)
+    
+    # Para o botão de abrir arquivo csv na aba principal do programa YURI
+    def info_arquivocsv(self):
+        if (self.verifica_medicao()):
+            return          
+        if not (self.flag_auto_maxmin):
+            if(self.verifica_numero(self.var_plot_max.get(), 'MAX e MIN do plot')):
+                 return
+            if(self.verifica_numero(self.var_plot_min.get(), 'MAX e MIN do plot')):
+                return
+        if(self.verifica_string(self.var_plot_tamanho_x.get(), 'Tamanho da placa')):
+            return
+        if(self.verifica_string(self.var_plot_tamanho_y.get(), 'Tamanho da placa')):
+            return
+        try:
+            data_caminho = filedialog.askopenfilename(initialdir = "/",
+                                                      title = "Selecione arquivo com extensão CSV",
+                                                      filetypes = (("Arquivo Csv","*.csv*"),
+                                                                   ("all files","*.*")))
+            data=[]
+            with open(data_caminho, 'r') as file:
+                reader = csv.reader(file, delimiter = ';', quoting=csv.QUOTE_NONNUMERIC)
+                for row in reader: # each row is a list
+                    data.append(row)                    
+        except:
+            return
+        if(len(data)<1)or(len(data[0])<1):
+            #acusa erro de arquivo csv com problema na linha ou coluna
+            return
+    
+        # Para testar se a função está lendo o tamanho do arquivo corretamente
+#         print(len(data))
+#         print(len(data[0]))
+        
+        vmax=max(map(max,data))
+        vmin=min(map(min,data))
+        self.max_medido = vmax
+        self.min_medido = vmin
+#         print(vmax)
+#         print(vmin)
+        self.lbl_par_11['text'] = str(self.max_medido)
+        self.lbl_par_12['text'] = str(self.min_medido)        
+        self.att_matriz
+        
+        valor_x = str(len(data[0]))
+        valor_y = str(len(data))
+#         print(valor_x)
+        
+        # A partir dessa linha o programa refaz a matriz de botões da janela principal de acordo com o tamanho
+        # da matriz do arquivo csv
+        
+        #tratamento do valor de entrada
+        if (self.verifica_string(valor_x, 'X e Y') or self.verifica_string(valor_y, 'X e Y')):
+            return
+        
+        if(int(valor_x)==0 or int(valor_y)==0):
+            messagebox.showwarning(title="Erro nos valores X e Y", message="X e Y deve ser um numero decimal maior que zero\n ")
+            return
+        
+        #destruir tabela existente
+        try:
+            self.frm_tabela.destroy()
+        except AttributeError:
+            pass
+        else:
+            self.frame2.destroy()
+            self.canvas.destroy()
+            self.buttons_frame.destroy()
+            for i in range(0, self.rows):
+                for j in range(0, self.cols):
+                    self.button_matriz[i][j].destroy()
+                    
+        #//////////////////////////////////////////////////////////////////////////////////
+        
+        self.frm_tabela = Frame(self.frm_notebook1, relief=RIDGE)
+        self.frm_tabela.place(x=460,y=55,width=608,height=590)
+        
+        # Cria o frame para area dos botões e scrollbar
+        self.frame2 = Frame(self.frm_tabela)
+        self.frame2.grid(row=3, column=0, sticky=NW)
+        
+        # Cria area dos botões
+        self.canvas = Canvas(self.frame2)
+        self.canvas.grid(row=0, column=0)
+        
+        # Cria scrollbar vertical e anexa a area de botões
+        vsbar = Scrollbar(self.frame2, orient=VERTICAL, command=self.canvas.yview)
+        vsbar.grid(row=0, column=1, sticky=NS)
+        self.canvas.configure(yscrollcommand=vsbar.set)
+        
+        # Cria scrollbar horizontal e anexa a area de botões
+        hsbar = Scrollbar(self.frame2, orient=HORIZONTAL, command=self.canvas.xview)
+        hsbar.grid(row=1, column=0, sticky=EW)
+        self.canvas.configure(xscrollcommand=hsbar.set)
+
+        # Cria frame que contem os botões
+        self.buttons_frame = Frame(self.canvas)
+        
+        # Cria matriz de botões
+        self.button_matriz = [[None for _ in range(int(valor_x))] for _ in range(int(valor_y))]
+        
+        # Adiciona botões no frame
+        for i in range(0, int(valor_y)):
+            for j in range(0, int(valor_x)):
+                self.button_matriz[i][j] = Button(self.buttons_frame, text="m[%d,%d]\nx=%d\ny=%d" % (int(valor_x), int(valor_y),j+1,i+1))
+                self.button_matriz[i][j].grid(row=i, column=j)
+                self.button_matriz[i][j]['command'] = lambda var1=i, var2=j: self.medir_ponto(var1,var2)
+        
+        # Cria janela para os botões
+        self.canvas.create_window((0,0), window=self.buttons_frame, anchor=NW)
+
+        self.buttons_frame.update_idletasks()  # Needed to make bbox info available.
+        bbox = self.canvas.bbox(ALL)  # Get bounding box of canvas with Buttons.
+
+        # Define the scrollable region as entire canvas with only the desired
+        # number of rows and columns displayed.
+        w, h = bbox[2]-bbox[1], bbox[3]-bbox[1]
+        dw, dh = int((w/int(valor_x)) * self.cols_disp), int((h/int(valor_y)) * self.rows_disp)
+        self.canvas.configure(scrollregion=bbox, width=dw, height=dh)
+        
+        #//////////////////////////////////////////////////////////////////////////////////
+                
+        self.cols=int(valor_x)
+        self.rows=int(valor_y)
+        self.atualiza_passo()
+        
+        # Passando os valores do arquivo csv lido para a matriz na aba principal - Yuri
+        self.matrix_meas=data
+        i = 0
+        j = 0
+        for i in range(0, int(valor_y)):
+            for j in range(0, int(valor_x)):
+                self.button_matriz[i][j].config(text="\n"+str(self.matrix_meas[i][j])+" dBm\n")
+                j = j + 1
+            i = i + 1
     
     def plot_salva(self):
         files = [('Portable Graphics Format(PNG)', '*.png'),
